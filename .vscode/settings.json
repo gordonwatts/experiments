@@ -1,0 +1,7 @@
+{
+    "julia.format.indent": 4,
+    "editor.formatOnSave": true,
+    "[julia]": {
+        "editor.defaultFormatter": "julialang.language-julia"
+    }
+}
