@@ -92,7 +92,7 @@ function main()
     # for each trial, calculate a new wiggle, apply the tree, and save the result.
     results = Matrix{Float64}(undef, sample_size, number_of_trials)
     for trial in 1:number_of_trials
-        wiggle = rand(-1.0:1.0, sample_size, number_of_inputs) .* 10.0^(-precision)
+        wiggle = randn(sample_size, number_of_inputs) .* 10.0^(-precision)
         wiggled_numbers = raw_numbers .+ wiggle
         results[:, trial] = execute_calculation_tree(operation_tree, wiggled_numbers)
     end
