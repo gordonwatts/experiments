@@ -86,6 +86,8 @@ function main()
     trial_means = Vector{Float64}(undef, number_of_trials)
     trial_std = Vector{Float64}(undef, number_of_trials)
 
+    println("Using $(Threads.nthreads()) threads")
+
     @threads for trial in 1:number_of_trials
         wiggle = randn(sample_size, number_of_inputs) .* 10.0^(-precision)
         wiggled_numbers = raw_numbers .+ wiggle
