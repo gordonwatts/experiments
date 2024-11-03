@@ -43,25 +43,6 @@ function generate_random_calculation_tree(num_inputs::Int, num_operations::Int):
     end
 end
 
-"""
-execute_calculation_tree(tree::Function, matrix::Matrix{Float64}) -> Matrix{Float64}
-
-Execute the calculation tree on the given matrix.
-
-# Arguments
-- `tree::Function`: The calculation tree function.
-- `matrix::Matrix{Float64}`: The matrix to apply the calculation tree on.
-
-# Returns
-- `Matrix{Float64}`: The resulting matrix after applying the calculation tree.
-"""
-function execute_calculation_tree(tree::Function, matrix::Matrix{Float64})::Vector{Float64}
-    r = tree(matrix)
-    # Why do I need to do this? I mean, I get it, but...
-    r = vec(r)
-    return r
-end
-
 function main()
     s = ArgParseSettings()
     @add_arg_table s begin
@@ -87,17 +68,41 @@ function main()
 
     # Next, lets generate the base numbers, and run the calculation according to
     # that.
-    raw_numbers = rand(-1.0:1.0, sample_size, number_of_inputs)
+    # TODO: Surely there is a better way to do random numbers like this.
+    raw_numbers = rand(-1.0:0.0001:1.0, sample_size, number_of_inputs)
     operation_tree = generate_random_calculation_tree(number_of_inputs, number_of_operations)
+
+    # Calculate the exact answer and bail if we've come up with a
+    # function that is just going to produce NaN's all the time!
+    exact_answer = vec(operation_tree(raw_numbers))
+    if any(isnan, exact_answer) || any(Inf .== exact_answer) || any(-Inf .== exact_answer)
+        # Count the number of NaN, Inf, and -Inf values.
+        nan_count = count(isnan, exact_answer)
+        inf_count = count(Inf .== exact_answer)
+        ninf_count = count(-Inf .== exact_answer)
+        # If the total number of bad ones is less than 1%, remove them from
+        # exact answer and raw_numbers, and report. If larger than 1% then
+        # we should report and bail.
+        total_bad = nan_count + inf_count + ninf_count
+        if total_bad / length(exact_answer) < 0.01
+            good_indices = .!isnan.(exact_answer) .& .!(Inf .== exact_answer) .& .!(-Inf .== exact_answer)
+            exact_answer = exact_answer[good_indices]
+            raw_numbers = raw_numbers[good_indices, :]
+            println("Removed bad values: NaN: $nan_count, Inf: $inf_count, -Inf: $ninf_count")
+        else
+            println("bad function: NaN: $nan_count, Inf: $inf_count, -Inf: $ninf_count")
+            return
+        end
+    end
+    sample_size = length(exact_answer)
 
     # for each trial, calculate a new wiggle, apply the tree, and save the result.
     trial_means = Vector{Float64}(undef, number_of_trials)
     trial_std = Vector{Float64}(undef, number_of_trials)
-    exact_answer = execute_calculation_tree(operation_tree, raw_numbers)
     for trial in 1:number_of_trials
         wiggle = randn(sample_size, number_of_inputs) .* 10.0^(-precision)
         wiggled_numbers = raw_numbers .+ wiggle
-        deltas = execute_calculation_tree(operation_tree, wiggled_numbers) .- exact_answer
+        deltas = vec(operation_tree(wiggled_numbers)) .- exact_answer
         trial_means[trial] = Statistics.mean(deltas)
         trial_std[trial] = Statistics.std(deltas)
     end
@@ -114,8 +119,7 @@ function main()
     std = Statistics.mean(trial_std)
 
     # And print out the results in scientific notation.
-    @printf("Mean: %.3e, stddev: %.3e\n", mean, std)
-    # println("Mean: $(round(mean, sigdigits=3)e), stddev: $(round(std, sigdigits=3)e)")
+    @printf("Mean: %.3e, stddev: %.3e, n_trials: %d\n", mean, std, sample_size)
 
 end
 
