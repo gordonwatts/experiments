@@ -88,7 +88,7 @@ function main()
             good_indices = .!isnan.(exact_answer) .& .!(Inf .== exact_answer) .& .!(-Inf .== exact_answer)
             exact_answer = exact_answer[good_indices]
             raw_numbers = raw_numbers[good_indices, :]
-            println("Removed bad values: NaN: $nan_count, Inf: $inf_count, -Inf: $ninf_count")
+            println("Removed bad initial value sets: NaN: $nan_count, Inf: $inf_count, -Inf: $ninf_count")
         else
             println("bad function: NaN: $nan_count, Inf: $inf_count, -Inf: $ninf_count")
             return
