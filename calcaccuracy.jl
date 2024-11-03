@@ -110,8 +110,7 @@ function main()
     # Check to see if everything came out NaN. If so, then
     # print out "bad random function".
     if all(isnan, trial_means) || all(isnan, trial_std)
-        println("bad random function")
-        # return
+        println("Everything is NaN - something went wrong")
     end
 
     # Calculate the final results
