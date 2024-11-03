@@ -2,6 +2,7 @@
 # import Pkg
 # Pkg.add("ArgParse")
 using ArgParse
+using Printf
 
 using Random
 using Statistics
@@ -12,7 +13,7 @@ const OPERATIONS = [
 ]
 
 """
-    generate_random_calculation_tree(num_inputs::Int, num_operations::Int) -> Function
+generate_random_calculation_tree(num_inputs::Int, num_operations::Int) -> Function
 
 Generate a random calculation tree with the specified number of inputs and operations.
 
@@ -43,7 +44,7 @@ function generate_random_calculation_tree(num_inputs::Int, num_operations::Int):
 end
 
 """
-    execute_calculation_tree(tree::Function, matrix::Matrix{Float64}) -> Matrix{Float64}
+execute_calculation_tree(tree::Function, matrix::Matrix{Float64}) -> Matrix{Float64}
 
 Execute the calculation tree on the given matrix.
 
@@ -82,7 +83,7 @@ function main()
 
     number_of_inputs = 10
     sample_size = 10000
-    number_of_trials = 1000
+    number_of_trials = 10000
 
     # Next, lets generate the base numbers, and run the calculation according to
     # that.
@@ -90,22 +91,32 @@ function main()
     operation_tree = generate_random_calculation_tree(number_of_inputs, number_of_operations)
 
     # for each trial, calculate a new wiggle, apply the tree, and save the result.
-    results = Matrix{Float64}(undef, sample_size, number_of_trials)
+    trial_means = Vector{Float64}(undef, number_of_trials)
+    trial_std = Vector{Float64}(undef, number_of_trials)
+    exact_answer = execute_calculation_tree(operation_tree, raw_numbers)
     for trial in 1:number_of_trials
         wiggle = randn(sample_size, number_of_inputs) .* 10.0^(-precision)
         wiggled_numbers = raw_numbers .+ wiggle
-        results[:, trial] = execute_calculation_tree(operation_tree, wiggled_numbers)
+        deltas = execute_calculation_tree(operation_tree, wiggled_numbers) .- exact_answer
+        trial_means[trial] = Statistics.mean(deltas)
+        trial_std[trial] = Statistics.std(deltas)
     end
 
-    # Calculate the mean and standard deviation of the results, after subtracting
-    # off the exact anwer for all the trials.
-    exact_answer = execute_calculation_tree(operation_tree, raw_numbers)
-    delta_results = results .- exact_answer
-    mean = Statistics.mean(delta_results)
-    std = Statistics.std(delta_results)
+    # Check to see if everything came out NaN. If so, then
+    # print out "bad random function".
+    if all(isnan, trial_means) || all(isnan, trial_std)
+        println("bad random function")
+        # return
+    end
 
-    # And print out the results with basic info.
-    println("Mean: $mean, stddev: $std")
+    # Calculate the final results
+    mean = Statistics.mean(trial_means)
+    std = Statistics.mean(trial_std)
+
+    # And print out the results in scientific notation.
+    @printf("Mean: %.3e, stddev: %.3e\n", mean, std)
+    # println("Mean: $(round(mean, sigdigits=3)e), stddev: $(round(std, sigdigits=3)e)")
+
 end
 
 main()
