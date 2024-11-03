@@ -62,7 +62,7 @@ function main()
     sample_size = 10000
     number_of_trials = 10000
 
-    raw_numbers = rand(-1.0:0.0001:1.0, sample_size, number_of_inputs)
+    raw_numbers = rand(-1.0:0.000001:1.0, sample_size, number_of_inputs)
     operation_tree = generate_random_calculation_tree(number_of_inputs, number_of_operations)
 
     exact_answer = vec(operation_tree(raw_numbers))
