@@ -1,9 +1,5 @@
-# What am I doing wrong with environments that I needed these two lines?
-# import Pkg
-# Pkg.add("ArgParse")
 using ArgParse
 using Printf
-
 using Random
 using Statistics
 
@@ -66,60 +62,45 @@ function main()
     sample_size = 10000
     number_of_trials = 10000
 
-    # Next, lets generate the base numbers, and run the calculation according to
-    # that.
-    # TODO: Surely there is a better way to do random numbers like this.
     raw_numbers = rand(-1.0:0.0001:1.0, sample_size, number_of_inputs)
     operation_tree = generate_random_calculation_tree(number_of_inputs, number_of_operations)
 
-    # Calculate the exact answer and bail if we've come up with a
-    # function that is just going to produce NaN's all the time!
     exact_answer = vec(operation_tree(raw_numbers))
-    if any(isnan, exact_answer) || any(Inf .== exact_answer) || any(-Inf .== exact_answer)
-        # Count the number of NaN, Inf, and -Inf values.
+    if any(isnan, exact_answer) || any(isinf, exact_answer)
         nan_count = count(isnan, exact_answer)
-        inf_count = count(Inf .== exact_answer)
-        ninf_count = count(-Inf .== exact_answer)
-        # If the total number of bad ones is less than 1%, remove them from
-        # exact answer and raw_numbers, and report. If larger than 1% then
-        # we should report and bail.
-        total_bad = nan_count + inf_count + ninf_count
+        inf_count = count(isinf, exact_answer)
+        total_bad = nan_count + inf_count
         if total_bad / length(exact_answer) < 0.01
-            good_indices = .!isnan.(exact_answer) .& .!(Inf .== exact_answer) .& .!(-Inf .== exact_answer)
+            good_indices = .!isnan.(exact_answer) .& .!isinf.(exact_answer)
             exact_answer = exact_answer[good_indices]
             raw_numbers = raw_numbers[good_indices, :]
-            println("Removed bad initial value sets: NaN: $nan_count, Inf: $inf_count, -Inf: $ninf_count")
+            println("Removed bad initial value sets: NaN: $nan_count, Inf: $inf_count")
         else
-            println("bad function: NaN: $nan_count, Inf: $inf_count, -Inf: $ninf_count")
+            println("bad function: NaN: $nan_count, Inf: $inf_count")
             return
         end
     end
     sample_size = length(exact_answer)
 
-    # for each trial, calculate a new wiggle, apply the tree, and save the result.
     trial_means = Vector{Float64}(undef, number_of_trials)
     trial_std = Vector{Float64}(undef, number_of_trials)
     for trial in 1:number_of_trials
         wiggle = randn(sample_size, number_of_inputs) .* 10.0^(-precision)
         wiggled_numbers = raw_numbers .+ wiggle
         deltas = vec(operation_tree(wiggled_numbers)) .- exact_answer
-        trial_means[trial] = Statistics.mean(deltas)
-        trial_std[trial] = Statistics.std(deltas)
+        trial_means[trial] = mean(deltas)
+        trial_std[trial] = std(deltas)
     end
 
-    # Check to see if everything came out NaN. If so, then
-    # print out "bad random function".
     if all(isnan, trial_means) || all(isnan, trial_std)
         println("Everything is NaN - something went wrong")
+        return
     end
 
-    # Calculate the final results
-    mean = Statistics.mean(trial_means)
-    std = Statistics.mean(trial_std)
+    mean_result = mean(trial_means)
+    std_result = mean(trial_std)
 
-    # And print out the results in scientific notation.
-    @printf("Mean: %.3e, stddev: %.3e, n_trials: %d\n", mean, std, sample_size)
-
+    @printf("Mean: %.3e, stddev: %.3e, n_trials: %d\n", mean_result, std_result, sample_size)
 end
 
 main()
