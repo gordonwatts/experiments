@@ -1,3 +1,24 @@
+"""
+This script generates a random calculation tree and evaluates its precision by performing multiple trials with slight variations in the input data.
+
+Usage:
+    julia calcaccuracy.jl --precision <precision> --depth <depth>
+
+Arguments:
+    --precision: Order of magnitude of the precision (e.g., 5 means 1e-5). Default is 5.
+    --depth: Depth of the calculation tree. Default is 1.
+
+To change the number of threads used by Julia, set the `JULIA_NUM_THREADS` environment variable before running the script. For example, to use 8 threads, run:
+    export JULIA_NUM_THREADS=8
+
+Dependencies:
+    - ArgParse
+    - Printf
+    - Random
+    - Statistics
+    - Base.Threads
+"""
+
 using ArgParse
 using Printf
 using Random
@@ -5,8 +26,11 @@ using Statistics
 using Base.Threads
 
 # Define possible operations
+# const OPERATIONS = [
+#     (.+), (.-), (.*), (./), x -> sqrt.(abs.(x)), x -> x .^ 2
+# ]
 const OPERATIONS = [
-    (.+), (.-), (.*), (./), x -> sqrt.(abs.(x)), x -> x .^ 2
+    (.+), (.*), x -> sqrt.(abs.(x)), x -> x .^ 2
 ]
 
 """
@@ -41,7 +65,12 @@ function generate_random_calculation_tree(num_inputs::Int, num_operations::Int):
 end
 
 function main()
-    s = ArgParseSettings()
+    s = ArgParseSettings(usage="""
+  This script generates a random calculation tree and evaluates its precision by performing multiple trials with slight variations in the input data.
+
+  To change the number of threads used by Julia, set the `JULIA_NUM_THREADS` environment variable before running the script. For example, to use 8 threads, run:
+      export JULIA_NUM_THREADS=8
+  """)
     @add_arg_table s begin
         "--precision"
         help = "Order of magnitude of the precision (e.g. 5, means 1e-5)"
@@ -56,6 +85,7 @@ function main()
     end
 
     parsed_args = parse_args(s)
+
     precision = parsed_args["precision"]
     number_of_operations = parsed_args["depth"]
 
